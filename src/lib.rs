@@ -3,8 +3,8 @@ pub mod units;
 #[cfg(test)]
 mod tests;
 
-pub use units::{Dim, Dlt, Len, Pos, Rad, Rot, Scl};
-pub use units::{ToDim, ToDlt, ToLen, ToRot, ToScl};
+pub use units::{Clr, Dim, Dlt, Len, Pos, Rad, Rot, Scl};
+pub use units::{ToClr, ToDim, ToDlt, ToLen, ToRot, ToScl};
 
 //use std::iter::IntoIterator;
 use std::sync::Arc;
@@ -32,7 +32,7 @@ pub enum Op {
     Origi(Dlt<Pos>, Shp),
     Scale(Dlt<Scl>, Shp),
     Compl(Shp),
-    Fill(Shp),
+    Fill(Clr, Shp),
     Outl(Len, Shp),
     Union(Vec<Shp>),
     Inter(Vec<Shp>),
@@ -138,6 +138,14 @@ impl Shp {
         Shp::Op(Arc::new(Op::Compl(self)))
     }
 
+    pub fn fill<T>(self, color: T) -> Self
+    where
+        T: ToClr,
+    {
+        let color = color.to_clr();
+        Shp::Op(Arc::new(Op::Fill(color, self)))
+    }
+
     pub fn size(&self) -> usize {
         match self {
             Shp::Pr(_) => 1,
@@ -156,7 +164,7 @@ impl Shp {
                     | Origi(_, shape)
                     | Scale(_, shape)
                     | Compl(shape)
-                    | Fill(shape)
+                    | Fill(_, shape)
                     | Outl(_, shape) => shape.size(),
                 }
             }
@@ -183,14 +191,14 @@ impl Shp {
                 });
 
                 match primitive {
+                    Nil => {
+                        floats.push(0.0);
+                        floats.push(0.0);
+                    }
                     Arch(dim) | Oval(dim) | Rect(dim) | Tria(dim) => {
                         let Dim(Len(width), Len(height)) = dim;
                         floats.push(*width);
                         floats.push(*height);
-                    }
-                    Nil => {
-                        floats.push(0.0);
-                        floats.push(0.0);
                     }
                 }
             }
@@ -247,8 +255,8 @@ impl Shp {
 
                         shape.add_to_float_vector(floats);
                     }
-                    Fill(shape) => {
-                        Self::push_instr(floats, FILL, 0.0, 0.0);
+                    Fill(color, shape) => {
+                        Self::push_instr(floats, FILL, Self::pack_color_to_float(color), 0.0);
 
                         shape.add_to_float_vector(floats);
                     }
@@ -267,6 +275,14 @@ impl Shp {
         floats.push(instruction);
         floats.push(arg1);
         floats.push(arg2);
+    }
+
+    fn pack_color_to_float(color: &Clr) -> f32 {
+        let r = color.0 as u32;
+        let g = color.1 as u32;
+        let b = color.2 as u32;
+        let packed_color = (r << 16) + (g << 8) + b;
+        packed_color as f32
     }
 }
 

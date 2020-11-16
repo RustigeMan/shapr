@@ -21,6 +21,9 @@ pub struct Rot(pub f32); // Rotation
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Scl(pub f32); // Scale
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct Clr(pub u8, pub u8, pub u8); // Color
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Dlt<T>(pub T); // Delta
 
@@ -108,6 +111,42 @@ impl ToScl for f32 {
 }
 impl ToScl for Scl {
     fn to_scl(self) -> Scl {
+        self
+    }
+}
+
+pub trait ToClr {
+    fn to_clr(self) -> Clr;
+}
+impl ToClr for (u8, u8, u8) {
+    fn to_clr(self) -> Clr {
+        let (r, g, b) = self;
+        Clr(r, g, b)
+    }
+}
+impl ToClr for [u8; 3] {
+    fn to_clr(self) -> Clr {
+        Clr(self[0], self[1], self[2])
+    }
+}
+
+impl ToClr for [f32; 3] {
+    fn to_clr(self) -> Clr {
+        let [r, g, b] = self;
+        let r = if r > 1.0 { 1.0 } else { r };
+        let g = if r > 1.0 { 1.0 } else { g };
+        let b = if b > 1.0 { 1.0 } else { b };
+
+        let max = u8::MAX as f32;
+        let r = r * max;
+        let g = g * max;
+        let b = b * max;
+
+        Clr(r as u8, g as u8, b as u8)
+    }
+}
+impl ToClr for Clr {
+    fn to_clr(self) -> Clr {
         self
     }
 }
